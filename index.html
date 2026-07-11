@@ -45,28 +45,28 @@
         }
 
         .dashboard {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
+            display: flex;
+            justify-content: center;
             background-color: var(--bg-color);
-            padding: 12px;
+            padding: 16px;
             border-radius: 8px;
             margin-bottom: 20px;
             text-align: center;
         }
 
         .stat-label {
-            font-size: 0.75rem;
+            font-size: 0.85rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             color: #718096;
             margin-bottom: 4px;
+            font-weight: 600;
         }
 
         .stat-value {
-            font-size: 1.25rem;
+            font-size: 2rem;
             font-weight: bold;
-            color: #1a202c;
+            color: #2b6cb0;
         }
 
         .canvas-container {
@@ -74,9 +74,9 @@
             background-color: #1a202c;
             border-radius: 8px;
             overflow: hidden;
-            height: 300px;
+            height: 320px;
             margin-bottom: 24px;
-            border: 2px solid var(--border-color);
+            border: 3px solid #4a5568;
         }
 
         canvas {
@@ -136,15 +136,7 @@
     
     <div class="dashboard">
         <div>
-            <div class="stat-label">Mass (N)</div>
-            <div id="mass-display" class="stat-value">30</div>
-        </div>
-        <div>
-            <div class="stat-label">Volume (V)</div>
-            <div id="volume-display" class="stat-value">50%</div>
-        </div>
-        <div>
-            <div class="stat-label">Density (M/V)</div>
+            <div class="stat-label">Calculated Density (Mass / Volume)</div>
             <div id="density-display" class="stat-value">0.60</div>
         </div>
     </div>
@@ -156,7 +148,7 @@
     <div class="controls">
         <div class="control-group">
             <div class="control-header">
-                <span>Mass (Number of Particles)</span>
+                <span>Mass (Particles)</span>
                 <span id="mass-val">30</span>
             </div>
             <input type="range" id="mass-slider" min="10" max="100" value="30">
@@ -164,7 +156,7 @@
 
         <div class="control-group">
             <div class="control-header">
-                <span>Volume (Piston Position)</span>
+                <span>Volume</span>
                 <span id="volume-val">50%</span>
             </div>
             <input type="range" id="volume-slider" min="20" max="100" value="50">
@@ -178,15 +170,11 @@
 
     const massSlider = document.getElementById('mass-slider');
     const volumeSlider = document.getElementById('volume-slider');
-
-    const massDisplay = document.getElementById('mass-display');
-    const volumeDisplay = document.getElementById('volume-display');
     const densityDisplay = document.getElementById('density-display');
 
     const massVal = document.getElementById('mass-val');
     const volumeVal = document.getElementById('volume-val');
 
-    // Resize canvas mapping to sharp internal resolution
     function resizeCanvas() {
         canvas.width = canvas.clientWidth;
         canvas.height = canvas.clientHeight;
@@ -203,7 +191,6 @@
             this.x = Math.random() * (maxX - particleRadius * 2) + particleRadius;
             this.y = Math.random() * (maxY - particleRadius * 2) + particleRadius;
             
-            // Random direction vector
             const angle = Math.random() * Math.PI * 2;
             this.vx = Math.cos(angle) * particleSpeed;
             this.vy = Math.sin(angle) * particleSpeed;
@@ -213,7 +200,6 @@
             this.x += this.vx;
             this.y += this.vy;
 
-            // Bounce off side walls
             if (this.x - particleRadius < 0) {
                 this.x = particleRadius;
                 this.vx *= -1;
@@ -222,13 +208,11 @@
                 this.vx *= -1;
             }
 
-            // Bounce off floor
             if (this.y + particleRadius > canvas.height) {
                 this.y = canvas.height - particleRadius;
                 this.vy *= -1;
             }
 
-            // Bounce off dynamic piston ceiling
             if (this.y - particleRadius < pistonY) {
                 this.y = pistonY + particleRadius;
                 this.vy *= -1;
@@ -238,7 +222,7 @@
         draw() {
             ctx.beginPath();
             ctx.arc(this.x, this.y, particleRadius, 0, Math.PI * 2);
-            ctx.fillStyle = '#3182ce'; // Blue particles
+            ctx.fillStyle = '#4299e1'; 
             ctx.fill();
             ctx.closePath();
         }
@@ -249,20 +233,17 @@
         const volumePct = parseInt(volumeSlider.value) / 100;
         const pistonY = canvas.height * (1 - volumePct);
 
-        // Add missing particles
         while (particles.length < targetCount) {
             particles.push(new Particle(canvas.width, canvas.height));
         }
-        // Remove extra particles
         if (particles.length > targetCount) {
             particles.length = targetCount;
         }
 
-        // Push escaped particles back into bounds if piston moves rapidly downwards
         particles.forEach(p => {
             if (p.y - particleRadius < pistonY) {
                 p.y = pistonY + particleRadius + Math.random() * 5;
-                p.vy = Math.abs(p.vy); // Make sure it's heading downward
+                p.vy = Math.abs(p.vy); 
             }
         });
     }
@@ -272,12 +253,27 @@
         const volume = parseInt(volumeSlider.value);
         const density = (mass / volume).toFixed(2);
 
-        massDisplay.textContent = mass;
-        volumeDisplay.textContent = volume + '%';
         densityDisplay.textContent = density;
-
         massVal.textContent = mass;
         volumeVal.textContent = volume + '%';
+    }
+
+    function drawChamberMarkings() {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+        ctx.lineWidth = 2;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.font = '10px sans-serif';
+        
+        // Draw tick lines down the side of the container
+        for (let i = 1; i < 10; i++) {
+            let y = (canvas.height / 10) * i;
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(15, y);
+            ctx.stroke();
+            
+            ctx.fillText((100 - (i * 10)) + '%', 20, y + 3);
+        }
     }
 
     function animate() {
@@ -286,16 +282,33 @@
         const volumePct = parseInt(volumeSlider.value) / 100;
         const pistonY = canvas.height * (1 - volumePct);
 
-        // Draw physical Piston assembly line
-        ctx.fillStyle = '#4a5568';
-        ctx.fillRect(0, pistonY, canvas.width, 10);
-        
-        // Handle particles
+        // 1. Draw volumetric scale lines in background
+        drawChamberMarkings();
+
+        // 2. Handle and draw gas molecules underneath
         syncParticles();
         particles.forEach(p => {
-            p.update(pistonY + 10); // account for piston thickness
+            p.update(pistonY + 14); // offset safely below piston face
             p.draw();
         });
+
+        // 3. Draw Piston Apparatus (Foreground so particles bounce cleanly below it)
+        // Draw the vertical center shaft/plunger
+        ctx.fillStyle = '#718096';
+        const shaftWidth = 20;
+        ctx.fillRect((canvas.width / 2) - (shaftWidth / 2), 0, shaftWidth, pistonY);
+
+        // Draw the handle on top of the plunger shaft
+        ctx.fillStyle = '#4a5568';
+        ctx.fillRect((canvas.width / 2) - 40, 0, 80, 8);
+
+        // Draw the main horizontal piston head seal block
+        ctx.fillStyle = '#4a5568';
+        ctx.fillRect(0, pistonY, canvas.width, 14);
+
+        // Draw a rubberized colorful bottom ring on the piston seal
+        ctx.fillStyle = '#2d3748';
+        ctx.fillRect(0, pistonY + 10, canvas.width, 4);
 
         requestAnimationFrame(animate);
     }
@@ -303,7 +316,6 @@
     massSlider.addEventListener('input', updateMetrics);
     volumeSlider.addEventListener('input', updateMetrics);
 
-    // Initial setup running state
     updateMetrics();
     animate();
 </script>
