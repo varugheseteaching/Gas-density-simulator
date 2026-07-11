@@ -157,7 +157,7 @@
         <div class="control-group">
             <div class="control-header">
                 <span>Volume</span>
-                <span id="volume-val">50%</span>
+                <span id="volume-val">50 mL</span>
             </div>
             <input type="range" id="volume-slider" min="20" max="100" value="50">
         </div>
@@ -230,7 +230,8 @@
 
     function syncParticles() {
         const targetCount = parseInt(massSlider.value);
-        const volumePct = parseInt(volumeSlider.value) / 100;
+        const volumeValue = parseInt(volumeSlider.value);
+        const volumePct = volumeValue / 100;
         const pistonY = canvas.height * (1 - volumePct);
 
         while (particles.length < targetCount) {
@@ -255,7 +256,7 @@
 
         densityDisplay.textContent = density;
         massVal.textContent = mass;
-        volumeVal.textContent = volume + '%';
+        volumeVal.textContent = volume + ' mL';
     }
 
     function drawChamberMarkings() {
@@ -264,7 +265,7 @@
         ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
         ctx.font = '10px sans-serif';
         
-        // Draw tick lines down the side of the container
+        // Draw tick lines down the side of the container in mL
         for (let i = 1; i < 10; i++) {
             let y = (canvas.height / 10) * i;
             ctx.beginPath();
@@ -272,14 +273,15 @@
             ctx.lineTo(15, y);
             ctx.stroke();
             
-            ctx.fillText((100 - (i * 10)) + '%', 20, y + 3);
+            ctx.fillText((100 - (i * 10)) + ' mL', 20, y + 3);
         }
     }
 
     function animate() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        const volumePct = parseInt(volumeSlider.value) / 100;
+        const volumeValue = parseInt(volumeSlider.value);
+        const volumePct = volumeValue / 100;
         const pistonY = canvas.height * (1 - volumePct);
 
         // 1. Draw volumetric scale lines in background
@@ -292,7 +294,7 @@
             p.draw();
         });
 
-        // 3. Draw Piston Apparatus (Foreground so particles bounce cleanly below it)
+        // 3. Draw Piston Apparatus
         // Draw the vertical center shaft/plunger
         ctx.fillStyle = '#718096';
         const shaftWidth = 20;
