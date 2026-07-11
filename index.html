@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gas Density Simulator</title>
+    <style>
+        :root {
+            --bg-color: #f4f6f9;
+            --card-color: #ffffff;
+            --text-color: #2d3748;
+            --primary-color: #3182ce;
+            --border-color: #e2e8f0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .simulator-card {
+            background-color: var(--card-color);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 24px;
+            width: 100%;
+            max-width: 500px;
+            box-sizing: border-box;
+        }
+
+        h2 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 1.5rem;
+            color: #1a202c;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            background-color: var(--bg-color);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #718096;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: #1a202c;
+        }
+
+        .canvas-container {
+            position: relative;
+            background-color: #1a202c;
+            border-radius: 8px;
+            overflow: hidden;
+            height: 300px;
+            margin-bottom: 24px;
+            border: 2px solid var(--border-color);
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .control-header {
+            display: flex;
+            justify-content: space-between;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            background: var(--border-color);
+            border-radius: 3px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            cursor: pointer;
+            transition: transform 0.1s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+    </style>
+</head>
+<body>
+
+<div class="simulator-card">
+    <h2>Gas Density Simulator</h2>
+    
+    <div class="dashboard">
+        <div>
+            <div class="stat-label">Mass (N)</div>
+            <div id="mass-display" class="stat-value">30</div>
+        </div>
+        <div>
+            <div class="stat-label">Volume (V)</div>
+            <div id="volume-display" class="stat-value">50%</div>
+        </div>
+        <div>
+            <div class="stat-label">Density (M/V)</div>
+            <div id="density-display" class="stat-value">0.60</div>
+        </div>
+    </div>
+
+    <div class="canvas-container">
+        <canvas id="simCanvas"></canvas>
+    </div>
+
+    <div class="controls">
+        <div class="control-group">
+            <div class="control-header">
+                <span>Mass (Number of Particles)</span>
+                <span id="mass-val">30</span>
+            </div>
+            <input type="range" id="mass-slider" min="10" max="100" value="30">
+        </div>
+
+        <div class="control-group">
+            <div class="control-header">
+                <span>Volume (Piston Position)</span>
+                <span id="volume-val">50%</span>
+            </div>
+            <input type="range" id="volume-slider" min="20" max="100" value="50">
+        </div>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const massSlider = document.getElementById('mass-slider');
+    const volumeSlider = document.getElementById('volume-slider');
+
+    const massDisplay = document.getElementById('mass-display');
+    const volumeDisplay = document.getElementById('volume-display');
+    const densityDisplay = document.getElementById('density-display');
+
+    const massVal = document.getElementById('mass-val');
+    const volumeVal = document.getElementById('volume-val');
+
+    // Resize canvas mapping to sharp internal resolution
+    function resizeCanvas() {
+        canvas.width = canvas.clientWidth;
+        canvas.height = canvas.clientHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    let particles = [];
+    const particleRadius = 4;
+    const particleSpeed = 2.5;
+
+    class Particle {
+        constructor(maxX, maxY) {
+            this.x = Math.random() * (maxX - particleRadius * 2) + particleRadius;
+            this.y = Math.random() * (maxY - particleRadius * 2) + particleRadius;
+            
+            // Random direction vector
+            const angle = Math.random() * Math.PI * 2;
+            this.vx = Math.cos(angle) * particleSpeed;
+            this.vy = Math.sin(angle) * particleSpeed;
+        }
+
+        update(pistonY) {
+            this.x += this.vx;
+            this.y += this.vy;
+
+            // Bounce off side walls
+            if (this.x - particleRadius < 0) {
+                this.x = particleRadius;
+                this.vx *= -1;
+            } else if (this.x + particleRadius > canvas.width) {
+                this.x = canvas.width - particleRadius;
+                this.vx *= -1;
+            }
+
+            // Bounce off floor
+            if (this.y + particleRadius > canvas.height) {
+                this.y = canvas.height - particleRadius;
+                this.vy *= -1;
+            }
+
+            // Bounce off dynamic piston ceiling
+            if (this.y - particleRadius < pistonY) {
+                this.y = pistonY + particleRadius;
+                this.vy *= -1;
+            }
+        }
+
+        draw() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, particleRadius, 0, Math.PI * 2);
+            ctx.fillStyle = '#3182ce'; // Blue particles
+            ctx.fill();
+            ctx.closePath();
+        }
+    }
+
+    function syncParticles() {
+        const targetCount = parseInt(massSlider.value);
+        const volumePct = parseInt(volumeSlider.value) / 100;
+        const pistonY = canvas.height * (1 - volumePct);
+
+        // Add missing particles
+        while (particles.length < targetCount) {
+            particles.push(new Particle(canvas.width, canvas.height));
+        }
+        // Remove extra particles
+        if (particles.length > targetCount) {
+            particles.length = targetCount;
+        }
+
+        // Push escaped particles back into bounds if piston moves rapidly downwards
+        particles.forEach(p => {
+            if (p.y - particleRadius < pistonY) {
+                p.y = pistonY + particleRadius + Math.random() * 5;
+                p.vy = Math.abs(p.vy); // Make sure it's heading downward
+            }
+        });
+    }
+
+    function updateMetrics() {
+        const mass = parseInt(massSlider.value);
+        const volume = parseInt(volumeSlider.value);
+        const density = (mass / volume).toFixed(2);
+
+        massDisplay.textContent = mass;
+        volumeDisplay.textContent = volume + '%';
+        densityDisplay.textContent = density;
+
+        massVal.textContent = mass;
+        volumeVal.textContent = volume + '%';
+    }
+
+    function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const volumePct = parseInt(volumeSlider.value) / 100;
+        const pistonY = canvas.height * (1 - volumePct);
+
+        // Draw physical Piston assembly line
+        ctx.fillStyle = '#4a5568';
+        ctx.fillRect(0, pistonY, canvas.width, 10);
+        
+        // Handle particles
+        syncParticles();
+        particles.forEach(p => {
+            p.update(pistonY + 10); // account for piston thickness
+            p.draw();
+        });
+
+        requestAnimationFrame(animate);
+    }
+
+    massSlider.addEventListener('input', updateMetrics);
+    volumeSlider.addEventListener('input', updateMetrics);
+
+    // Initial setup running state
+    updateMetrics();
+    animate();
+</script>
+
+</body>
+</html>
