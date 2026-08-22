@@ -11,6 +11,18 @@
             --text-color: #2d3748;
             --primary-color: #3182ce;
             --border-color: #e2e8f0;
+            --app-scale: 0.6; /* scale the whole app to 60% for embedding */
+        }
+
+        /* Wrapper to scale the entire app (useful when embedding in an iframe)
+           width is expanded to compensate for the CSS scale so the layout doesn't get clipped */
+        .app-wrapper {
+            transform: scale(var(--app-scale));
+            transform-origin: top center;
+            width: calc(100% / var(--app-scale));
+            box-sizing: border-box;
+            display: flex;
+            justify-content: center;
         }
 
         body {
@@ -24,6 +36,7 @@
             align-items: center;
             min-height: 100vh;
             box-sizing: border-box;
+            overflow: visible; /* allow scaled content to be visible when embedded */
         }
 
         .simulator-card {
@@ -131,6 +144,7 @@
 </head>
 <body>
 
+<div class="app-wrapper">
 <div class="simulator-card">
     <h2>Gas Density Simulator</h2>
     
@@ -162,6 +176,7 @@
             <input type="range" id="volume-slider" min="20" max="100" value="50">
         </div>
     </div>
+</div>
 </div>
 
 <script>
